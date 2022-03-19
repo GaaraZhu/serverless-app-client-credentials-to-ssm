@@ -1,0 +1,36 @@
+{
+  "name": "serverless-app-client-credentials-to-ssm",
+  "version": "1.0.0",
+  "description": "Export Cognito app client credentials to SSM Parameter store",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build is required right now'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GaaraZhu/serverless-app-client-credentials-to-ssm.git"
+  },
+  "keywords": [
+    "serverless",
+    "serverless",
+    "plugin",
+    "aws",
+    "cognito",
+    "api",
+    "gateway",
+    "lambda",
+    "parameter",
+    "store"
+  ],
+  "author": "GaryZhu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GaaraZhu/serverless-app-client-credentials-to-ssm/issues"
+  },
+  "homepage": "https://github.com/GaaraZhu/serverless-app-client-credentials-to-ssm#readme",
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "serverless": "^2.21.0"
+  }
+}
