@@ -29,7 +29,6 @@ class AppClientCredentialsExporter {
 
     // set up serverless hooks
     this.hooks = {
-      // 'initialize': this.exportCredetialsToSSM.bind(this),
       'after:deploy:deploy': this.exportCredetialsToSSM.bind(this),
     };
   }
@@ -60,47 +59,74 @@ class AppClientCredentialsExporter {
       } else {
         const authUrl = `https://${data.UserPool.Domain}.auth.${that.region}.amazoncognito.com/oauth2/token`;
 
-        // 4. describe user pool client to get credentials
-        that.log('info', `pulling app client credentials for ${that.pluginConfig.appClientName}`);
-        const describeUserPoolClientParams = {
-          UserPoolId: appClient.UserPoolId,
-          ClientId: appClient.ClientId,
+        // 4. pull existing application configuration from parameter store
+        const getParameterParams = {
+          Name: that.pluginConfig.parameterName,
         };
-        that.cognitoIdp.describeUserPoolClient(describeUserPoolClientParams, function(err, data) {
-          if (err) {
-            that.log('error', `failed to describe user pool client due to ${JSON.stringify(err)}`);
-          } else  {
-            // 5. put parameter to SSM with app client configurations
-            that.log('info', `updating parameter ${that.pluginConfig.parameterName} with app client credentials`);
-            const appClientConfig = {
-              auth: {
-                cognito: {
-                  url: authUrl,
-                  clientId: describeUserPoolClientParams.ClientId,
-                  clientSecret: data.UserPoolClient.ClientSecret,
-                },
-              },
-            };
-            const putParameterParams = {
-              Name: that.pluginConfig.parameterName,
-              Value: JSON.stringify(appClientConfig, null, '\t'),
-              DataType: 'text',
-              Overwrite: true,
-              Tier: 'Standard',
-              Type: 'String',
-            };
-            that.ssm.putParameter(putParameterParams, function(err, data) {
-              if (err) {
-                that.log('error', `failed to put parameter ${JSON.stringify(putParameterParams)} due to ${JSON.stringify(err)}`);
-              }
-              that.log('info', `app client credentials have been exported to parameter ${that.pluginConfig.parameterName}`);
-            });
+        var applicationConfig = {};
+        that.ssm.getParameter(getParameterParams, function(err, data) {
+          if (err && err.code !== 'ParameterNotFound') {
+              that.log('error', `failed to get parameter ${that.pluginConfig.parameterName} due to ${JSON.stringify(err)}`);
           }
+          if (data && data.Parameter.Value) {
+            applicationConfig = JSON.parse(data.Parameter.Value);
+          }
+
+          // 5. describe user pool client to get credentials
+          that.log('info', `pulling app client credentials for ${that.pluginConfig.appClientName}`);
+          const describeUserPoolClientParams = {
+            UserPoolId: appClient.UserPoolId,
+            ClientId: appClient.ClientId,
+          };
+          that.cognitoIdp.describeUserPoolClient(describeUserPoolClientParams, function(err, data) {
+            if (err) {
+              that.log('error', `failed to describe user pool client due to ${JSON.stringify(err)}`);
+            } else  {
+              // 6. put parameter to SSM with app client configurations
+              that.log('info', `updating parameter ${that.pluginConfig.parameterName} with app client credentials`);
+
+              const appClientConfig = {
+                url: authUrl,
+                clientId: describeUserPoolClientParams.ClientId,
+                clientSecret: data.UserPoolClient.ClientSecret,
+              };
+              that.log('info', `current application config: ${JSON.stringify(applicationConfig)}`);
+              if (applicationConfig.auth && applicationConfig.auth.cognito) {
+                const currentAppClientConfig = applicationConfig.auth.cognito;
+                if (currentAppClientConfig.url === appClientConfig.url
+                  && currentAppClientConfig.clientId === appClientConfig.clientId
+                  && currentAppClientConfig.clientSecret === appClientConfig.clientSecret) {
+                    that.log('warn', `finished exporting app client credentials as no changes have been detected`);
+                    return;
+                  }
+              }
+              that.log('info', `merging app client configuration and application configuration`);
+              applicationConfig = that.mergeApplicationConfig(applicationConfig, appClientConfig);
+              const putParameterParams = {
+                Name: that.pluginConfig.parameterName,
+                Value: JSON.stringify(applicationConfig, null, '\t'),
+                DataType: 'text',
+                Overwrite: true,
+                Tier: 'Standard',
+                Type: 'String',
+              };
+              that.ssm.putParameter(putParameterParams, function(err, data) {
+                if (err) {
+                  that.log('error', `failed to put parameter ${JSON.stringify(putParameterParams)} due to ${JSON.stringify(err)}`);
+                }
+                that.log('info', `app client credentials have been exported to parameter ${that.pluginConfig.parameterName}`);
+              });
+            }
+          });
         });
       }
     });
   }
 
+  /**
+   * List all app clients in a user pool
+   * @returns an array of app clients
+   */
   async listAllCognitoAppClients() {
     var that = this;
     var appClients = [];
@@ -131,6 +157,34 @@ class AppClientCredentialsExporter {
     } else {
       return appClients;
     }
+  }
+
+  /**
+   * Updating app client credentials in application configuration
+   * @param {*} appConfig application configuration
+   * @param {*} appClientConfig app client configuration, including authentication URL, client id, and client credentials
+   * @returns merged application configuration like below
+   * {
+   *  auth: {
+   *    cognito: {
+   *      url: "https://asdfafdsa-systems-idp-nonprod.auth.ap-southeast-2.amazoncognito.com/oauth2/token",
+   *      clientId: "asdfadsf",
+   *      clientSecret: "s1oglveco0hsfraoag90ebr107rmvo9g7u36h"
+   *    }
+   *  },
+   *  ....
+   * }
+   */
+  mergeApplicationConfig(appConfig, appClientConfig) {
+    if (appConfig.auth) {
+      appConfig.auth['cognito'] = appClientConfig;
+    } else {
+      appConfig.auth = {
+        cognito: appClientConfig,
+      };
+    }
+
+    return appConfig;
   }
 
   log(level, message) {
