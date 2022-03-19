@@ -1,20 +1,20 @@
 # serverless-app-client-credentials-to-ssm
 Export Cognito app client credentials to SSM Parameter store
 
-# Background
+## Background
 [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is a powerful service for application authentication, authorization, and user management . When working with µservice applications, we can use AWS Cognito user pool authentication to implement a fine-grained service-to-service access control where each service has a dedicated resource server with pre-defined scopes for its resources(API Gateway, Lambda etc), and a dedicated app client with limited scopes it needs to access external resources.<br/><br/>
 This service-to-service interaction normally starts with a user pool sign-in with the app client credentials where a JWT token will be returned from Cognito to the initiator for external resource access. We used to copy the app client credentials from AWS console and put to the configuration for each µservice manually. With the increasing number of µservices, we need a tool to do this securely and automatically for us.
 
-# How it works
+## How it works
 A serverless hook will be triggered after the deployment to pull the app client credentials includes **url**, **clientId**, and **clientSecret** which will be merged as part of the application configuration(`auth.cognito`) stored in the configured SSM parameter.<br/><br/>
 **Note: Only when there are changes for any of these three fields will this plugin update the SSM parameter.**
 
-# Installation
+## Installation
 ```
 npm install serverless-app-client-credentials-to-ssm --save-dev
 ```
 
-# Configuration
+## Configuration
 ### plugin registration ###
 Inside your project's serverless.yml file add following entry to the plugins section:
 ```YAML
@@ -31,7 +31,7 @@ custom:
     parameterName: /layered-apis/${self:service}/${self:provider.stage}
 ```
 
-# Sample parameter
+## Sample parameter
 ```JSON
 {
   "auth": {
@@ -49,9 +49,8 @@ custom:
 }
 ```
 
-
-# License
+## License
 MIT
 
-# Contributing
+## Contribute
 Yes, highly appreciate for any PRs. Thank you!
