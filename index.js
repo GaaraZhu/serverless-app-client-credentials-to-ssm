@@ -106,8 +106,9 @@ class AppClientCredentialsExporter {
               that.ssm.putParameter(putParameterParams, function(err, data) {
                 if (err) {
                   that.log('error', `failed to put parameter ${JSON.stringify(putParameterParams)} due to ${JSON.stringify(err)}`);
+                } else {
+                  that.log('info', `app client credentials have been exported to parameter ${that.pluginConfig.parameterName}`);
                 }
-                that.log('info', `app client credentials have been exported to parameter ${that.pluginConfig.parameterName}`);
               });
             }
           });
