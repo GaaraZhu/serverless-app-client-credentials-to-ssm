@@ -37,29 +37,22 @@ class AppClientCredentialsExporter {
     const that = this;
     that.log('info', `plugin configuration: ${JSON.stringify(this.pluginConfig)}`);
 
-    // 1. list all app clients in the user pool
+    // 1. find app client in the user pool
     that.log('info', `getting app client ${that.pluginConfig.appClientName} in user pool ${that.pluginConfig.userPoolId}`);
-    const appClients = await that.listAllCognitoAppClients();
-    if (!appClients) {
-      that.log('error', `serverless-app-client-credentials-to-ssm: no app clients found in user pool ${that.pluginConfig.userPoolId}`);
-      return;
-    }
-
-    // 2. filter the app clients by name
-    const appClient = appClients.find(c => c.ClientName.toUpperCase() === that.pluginConfig.appClientName.toUpperCase());
+    const appClient = await that.findAppClient();
     if (!appClient) {
       that.log('error', `no app client found with name ${that.pluginConfig.appClientName} in user pool ${that.pluginConfig.userPoolId}`);
       return;
     }
 
-    // 3. describe user pool to get authentication url
+    // 2. describe user pool to get authentication url
     this.cognitoIdp.describeUserPool({ UserPoolId: that.pluginConfig.userPoolId}, function(err, data) {
       if (err) {
         that.log('error', `failed to describe user pool due to ${JSON.stringify(err)}`);
       } else {
         const authUrl = `https://${data.UserPool.Domain}.auth.${that.region}.amazoncognito.com/oauth2/token`;
 
-        // 4. pull existing application configuration from parameter store
+        // 3. pull existing application configuration from parameter store
         const getParameterParams = {
           Name: that.pluginConfig.parameterName,
         };
@@ -72,7 +65,7 @@ class AppClientCredentialsExporter {
             applicationConfig = JSON.parse(data.Parameter.Value);
           }
 
-          // 5. describe user pool client to get credentials
+          // 4. describe user pool client to get credentials
           that.log('info', `pulling app client credentials for ${that.pluginConfig.appClientName}`);
           const describeUserPoolClientParams = {
             UserPoolId: appClient.UserPoolId,
@@ -82,7 +75,7 @@ class AppClientCredentialsExporter {
             if (err) {
               that.log('error', `failed to describe user pool client due to ${JSON.stringify(err)}`);
             } else  {
-              // 6. put parameter to SSM with app client configurations
+              // 5. put parameter to SSM with app client configurations
               that.log('info', `updating parameter ${that.pluginConfig.parameterName} with app client credentials`);
 
               const appClientConfig = {
@@ -124,12 +117,12 @@ class AppClientCredentialsExporter {
   }
 
   /**
-   * List all app clients in a user pool
-   * @returns an array of app clients
+   * List app clients in batches to find the app client
+   * @returns an app client if exists
    */
-  async listAllCognitoAppClients() {
+  async findAppClient() {
     var that = this;
-    var appClients = [];
+    var resultAppClient = null;
     var params = {
       UserPoolId: that.pluginConfig.userPoolId,
       /* NextToken: 'STRING_VALUE' */
@@ -138,25 +131,24 @@ class AppClientCredentialsExporter {
     while(hasNext) {
       await this.cognitoIdp.listUserPoolClients(params).promise().then(data => {
         if(data.UserPoolClients.length != 0) {
-          appClients.push.apply(appClients, data.UserPoolClients);
+          resultAppClient = data.UserPoolClients.find(c => c.ClientName.toUpperCase() === that.pluginConfig.appClientName.toUpperCase());
+          if (appClient) {
+            hasNext = false;
+            return;
+          }
+
           if(data.NextToken) {
             params.NextToken = data.NextToken;
-          } else {
-            hasNext = false;
+            return;
           }
-        } else {
-          hasNext = false;
         }
+        hasNext = false;
       }).catch(err => {
         that.log('error', `failed to list user pool clients due to ${JSON.stringify(err)}`);
         hasNext = false;
       });
     }
-    if(appClients.length==0) {
-      return null;
-    } else {
-      return appClients;
-    }
+    return resultAppClient;
   }
 
   /**
