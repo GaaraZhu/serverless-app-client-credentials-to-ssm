@@ -118,7 +118,7 @@ class AppClientCredentialsExporter {
 
   /**
    * List app clients in batches to find the app client
-   * @returns an app client if exists
+   * @returns an app client if exists, null if not
    */
   async findAppClient() {
     var that = this;

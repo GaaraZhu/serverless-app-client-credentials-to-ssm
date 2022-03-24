@@ -1,6 +1,6 @@
 {
   "name": "serverless-app-client-credentials-to-ssm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Export Cognito app client credentials to SSM Parameter store",
   "main": "index.js",
   "scripts": {
