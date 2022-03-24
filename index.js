@@ -48,7 +48,7 @@ class AppClientCredentialsExporter {
     // 2. describe user pool to get authentication url
     this.cognitoIdp.describeUserPool({ UserPoolId: that.pluginConfig.userPoolId}, function(err, data) {
       if (err) {
-        that.log('error', `failed to describe user pool due to ${JSON.stringify(err)}`);
+        that.log('error', `failed to describe user pool due to ${err}`);
       } else {
         const authUrl = `https://${data.UserPool.Domain}.auth.${that.region}.amazoncognito.com/oauth2/token`;
 
@@ -59,7 +59,7 @@ class AppClientCredentialsExporter {
         var applicationConfig = {};
         that.ssm.getParameter(getParameterParams, function(err, data) {
           if (err && err.code !== 'ParameterNotFound') {
-              that.log('error', `failed to get parameter ${that.pluginConfig.parameterName} due to ${JSON.stringify(err)}`);
+              that.log('error', `failed to get parameter ${that.pluginConfig.parameterName} due to ${err}`);
           }
           if (data && data.Parameter.Value) {
             applicationConfig = JSON.parse(data.Parameter.Value);
@@ -73,7 +73,7 @@ class AppClientCredentialsExporter {
           };
           that.cognitoIdp.describeUserPoolClient(describeUserPoolClientParams, function(err, data) {
             if (err) {
-              that.log('error', `failed to describe user pool client due to ${JSON.stringify(err)}`);
+              that.log('error', `failed to describe user pool client due to ${err}`);
             } else  {
               // 5. put parameter to SSM with app client configurations
               that.log('info', `updating parameter ${that.pluginConfig.parameterName} with app client credentials`);
@@ -83,7 +83,6 @@ class AppClientCredentialsExporter {
                 clientId: describeUserPoolClientParams.ClientId,
                 clientSecret: data.UserPoolClient.ClientSecret,
               };
-              that.log('info', `current application config: ${JSON.stringify(applicationConfig)}`);
               if (applicationConfig.auth && applicationConfig.auth.cognito) {
                 const currentAppClientConfig = applicationConfig.auth.cognito;
                 if (currentAppClientConfig.url === appClientConfig.url
@@ -105,7 +104,7 @@ class AppClientCredentialsExporter {
               };
               that.ssm.putParameter(putParameterParams, function(err, data) {
                 if (err) {
-                  that.log('error', `failed to put parameter ${JSON.stringify(putParameterParams)} due to ${JSON.stringify(err)}`);
+                  that.log('error', `failed to put parameter ${JSON.stringify(putParameterParams)} due to ${err}`);
                 } else {
                   that.log('info', `app client credentials have been exported to parameter ${that.pluginConfig.parameterName}`);
                 }
@@ -133,7 +132,7 @@ class AppClientCredentialsExporter {
       await this.cognitoIdp.listUserPoolClients(params).promise().then(data => {
         if(data.UserPoolClients.length != 0) {
           resultAppClient = data.UserPoolClients.find(c => c.ClientName.toUpperCase() === that.pluginConfig.appClientName.toUpperCase());
-          if (appClient) {
+          if (resultAppClient) {
             hasNext = false;
             return;
           }
@@ -145,7 +144,7 @@ class AppClientCredentialsExporter {
         }
         hasNext = false;
       }).catch(err => {
-        that.log('error', `failed to list user pool clients due to ${JSON.stringify(err)}`);
+        that.log('error', `failed to list user pool clients due to ${err}`);
         hasNext = false;
       });
     }
