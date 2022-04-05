@@ -7,7 +7,10 @@ This service-to-service interaction normally starts with a user pool sign-in wit
 
 ## How it works
 A serverless hook will be triggered after the deployment to pull the app client credentials includes **url**, **clientId**, and **clientSecret** which will be merged as part of the application configuration(`auth.cognito`) stored in the configured SSM parameter.<br/><br/>
-**Note: Only when there are changes for any of these three fields will this plugin update the SSM parameter.**
+**Note:**
+* Only when there are changes for any of these three fields will this plugin update the SSM parameter.
+* For security reason, `SecurityString` parameter with the default AWS account key is used here.
+
 
 ## Installation
 ```
