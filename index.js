@@ -55,6 +55,7 @@ class AppClientCredentialsExporter {
         // 3. pull existing application configuration from parameter store
         const getParameterParams = {
           Name: that.pluginConfig.parameterName,
+          WithDecryption: true,
         };
         var applicationConfig = {};
         that.ssm.getParameter(getParameterParams, function(err, data) {
@@ -100,7 +101,7 @@ class AppClientCredentialsExporter {
                 DataType: 'text',
                 Overwrite: true,
                 Tier: 'Standard',
-                Type: 'String',
+                Type: 'SecureString',
               };
               that.ssm.putParameter(putParameterParams, function(err, data) {
                 if (err) {
