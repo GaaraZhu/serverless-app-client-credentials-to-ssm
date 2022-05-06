@@ -31,7 +31,7 @@ custom:
   serverless-app-client-credentials-to-ssm:
     userPoolId: ${ssm:/layered-apis/userPoolId}
     appClientName: ${self:custom.appClientName}
-    parameterName: /layered-apis/${self:service}/${self:provider.stage}
+    parameterName: /config/${self:service}-${self:provider.stage}
 ```
 
 ## Sample parameter
