@@ -2,11 +2,11 @@
 Export Cognito app client credentials to SSM Parameter store
 
 ## Background
-[Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is a powerful service for application authentication, authorization, and user management . When working with µservice applications, we can use AWS Cognito user pool authentication to implement a fine-grained service-to-service access control where each service has a dedicated resource server with pre-defined scopes for its resources(API Gateway, Lambda etc), and a dedicated app client with limited scopes it needs to access external resources.<br/><br/>
+[Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is a powerful service for application authentication, authorization, and user management. When working with µservice applications, we can use AWS Cognito user pool authentication to implement a [fine-grained service-to-service access control](https://gaarazhu.github.io/fine-grained-authorization/) where each service has a dedicated resource server with pre-defined scopes for its resources(API Gateway, Lambda etc), and a dedicated app client with limited scopes it needs to access external resources.<br/><br/>
 This service-to-service interaction normally starts with a user pool sign-in with the app client credentials where a JWT token will be returned from Cognito to the initiator for external resource access. We used to copy the app client credentials from AWS console and put to the configuration for each µservice manually. With the increasing number of µservices, we need a tool to do this securely and automatically for us.
 
 ## How it works
-A serverless hook will be triggered after the deployment to pull the app client credentials includes **url**, **clientId**, and **clientSecret** which will be merged as part of the application configuration(`auth.cognito`) stored in the configured SSM parameter.<br/><br/>
+[A serverless "hook"](https://www.serverless.com/framework/docs/guides/plugins/creating-plugins#lifecycle-events) will be triggered after the deployment to pull the app client credentials includes **url**, **clientId**, and **clientSecret** which will be merged as part of the application configuration(`auth.cognito`) stored in the configured SSM parameter.<br/><br/>
 **Note:**
 * Only when there are changes for any of these three fields will this plugin update the SSM parameter.
 * For security reason, `SecurityString` parameter with the default AWS account key is used here.
